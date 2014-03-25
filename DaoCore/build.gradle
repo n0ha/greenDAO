@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 group = 'de.greenrobot'
-version = '1.3.7'
+version = '1.3.7.n0ha-SNAPSHOT'
 sourceCompatibility = 1.6
 
 def isSnapshot = version.endsWith('-SNAPSHOT')

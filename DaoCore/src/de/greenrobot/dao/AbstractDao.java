@@ -773,36 +773,101 @@ public abstract class AbstractDao<T, K> {
         }
     }
 
-    /** Gets the SQLiteDatabase for custom database access. Not needed for greenDAO entities. */
+  /**
+   * Gets the SQLiteDatabase for custom database access. Not needed for greenDAO
+   * entities.
+   */
     public SQLiteDatabase getDatabase() {
-        return db;
+    return this.db;
+  }
+
+  /**
+   * just stores the given entity, if the primary key field is filled, it will
+   * be updated, a check if the given primary key exists will be performed.
+   * Otherwise it will be inserted.
+   * 
+   * @see AbstractDao#save(Object, boolean)
+   * @param entity
+   *          the entity to save
+   * @return the saved entity
+   */
+  public T save(T entity) {
+    return this.save(entity, true);
+  }
+
+  /**
+   * just stores the given entity. if <code>checkExisting</code> is set to
+   * <code>true</code>, it will be checked if the given entity with the given
+   * primary key exists in the database
+   * 
+   * @param entity
+   *          the entity to save
+   * @param checkExistingPK
+   *          if <code>true</code> the primary key of the entity will be checked
+   *          against the database
+   * @return the saved entity
+   */
+  public T save(T entity, boolean checkExistingPK) {
+    K primaryKeyValue = this.getKey(entity);
+    if (primaryKeyValue == null) { // insert if there is no PK
+      this.insert(entity);
+    } else {
+      if (checkExistingPK) { // if have to chack, load the entity for the PK and
+                             // insert or update
+        T loadedEntity = this.load(primaryKeyValue);
+        if (loadedEntity != null) {
+          this.update(entity);
+        } else {
+          this.insert(entity);
+        }
+      } else { // if pk is set and no check wanted, just update. maybe an error
+               // will be thrown
+        this.update(entity);
+      }
+    }
+    return entity;
     }
 
-    /** Reads the values from the current position of the given cursor and returns a new entity. */
+  /**
+   * Reads the values from the current position of the given cursor and returns
+   * a new entity.
+   */
     abstract protected T readEntity(Cursor cursor, int offset);
 
-    /** Reads the key from the current position of the given cursor, or returns null if there's no single-value key. */
+  /**
+   * Reads the key from the current position of the given cursor, or returns
+   * null if there's no single-value key.
+   */
     abstract protected K readKey(Cursor cursor, int offset);
 
-    /** Reads the values from the current position of the given cursor into an existing entity. */
+  /**
+   * Reads the values from the current position of the given cursor into an
+   * existing entity.
+   */
     abstract protected void readEntity(Cursor cursor, T entity, int offset);
 
-    /** Binds the entity's values to the statement. Make sure to synchronize the statement outside of the method. */
+  /**
+   * Binds the entity's values to the statement. Make sure to synchronize the
+   * statement outside of the method.
+   */
     abstract protected void bindValues(SQLiteStatement stmt, T entity);
 
     /**
-     * Updates the entity's key if possible (only for Long PKs currently). This method must always return the entity's
-     * key regardless of whether the key existed before or not.
+   * Updates the entity's key if possible (only for Long PKs currently). This
+   * method must always return the entity's key regardless of whether the key
+   * existed before or not.
      */
     abstract protected K updateKeyAfterInsert(T entity, long rowId);
 
     /**
-     * Returns the value of the primary key, if the entity has a single primary key, or, if not, null. Returns null if
-     * entity is null.
+   * Returns the value of the primary key, if the entity has a single primary
+   * key, or, if not, null. Returns null if entity is null.
      */
     abstract protected K getKey(T entity);
 
-    /** Returns true if the Entity class can be updated, e.g. for setting the PK after insert. */
+  /**
+   * Returns true if the Entity class can be updated, e.g. for setting the PK
+   * after insert.
+   */
     abstract protected boolean isEntityUpdateable();
-
 }

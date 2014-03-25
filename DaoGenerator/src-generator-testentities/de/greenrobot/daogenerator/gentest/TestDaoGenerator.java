@@ -40,35 +40,38 @@ public class TestDaoGenerator {
     private Schema schema2;
 
     public TestDaoGenerator() {
-        schema = new Schema(1, "de.greenrobot.daotest");
-        schema.setDefaultJavaPackageTest("de.greenrobot.daotest.entity");
+    this.schema = new Schema(1, "de.greenrobot.daotest");
+    this.schema.setDefaultJavaPackageTest("de.greenrobot.daotest.entity");
 
-        createSimple();
-        createSimpleNotNull();
-        testEntity = createTest();
-        createRelation();
-        createDate();
-        createSpecialNames();
-        createAbcdef();
-        createToMany();
-        createTreeEntity();
-        createActive();
-        createExtendsImplements();
-        createStringKeyValue();
-        createAutoincrement();
-        createSqliteMaster();
+    this.createSimple();
+    this.createSimpleNotNull();
+    this.testEntity = this.createTest();
+    this.createRelation();
+    this.createDate();
+    this.createSpecialNames();
+    this.createAbcdef();
+    this.createToMany();
+    this.createTreeEntity();
+    this.createActive();
+    this.createExtendsImplements();
+    this.createChildclass();
+    this.createStringKeyValue();
+    this.createAutoincrement();
+    this.createSqliteMaster();
+    this.createEntityQueryBuilder();
+    this.createSave();
 
-        createSchema2();
+    this.createSchema2();
     }
 
     public void generate() throws Exception {
         DaoGenerator daoGenerator = new DaoGenerator();
-        daoGenerator.generateAll(schema, "../DaoTest/src-gen", "../DaoTest/src");
-        daoGenerator.generateAll(schema2, "../DaoTest/src-gen", "../DaoTest/src");
+    daoGenerator.generateAll(this.schema, "../DaoTest/src-gen", "../DaoTest/src");
+    daoGenerator.generateAll(this.schema2, "../DaoTest/src-gen", "../DaoTest/src");
     }
 
     protected void createSimple() {
-        Entity simple = schema.addEntity("SimpleEntity");
+    Entity simple = this.schema.addEntity("SimpleEntity");
         simple.addIdProperty();
         simple.addBooleanProperty("simpleBoolean");
         simple.addByteProperty("simpleByte");
@@ -216,28 +219,35 @@ public class TestDaoGenerator {
         entity.implementsSerializable();
     }
 
-    private void createSchema2() {
-        schema2 = new Schema(1, "de.greenrobot.daotest2");
-        schema2.setDefaultJavaPackageTest("de.greenrobot.daotest2.entity");
-        schema2.setDefaultJavaPackageDao("de.greenrobot.daotest2.dao");
-        schema2.enableKeepSectionsByDefault();
+  protected void createChildclass() {
+    Entity entity = this.schema.addEntity("ChildclassEntity");
+    entity.addIdProperty();
+    entity.addStringProperty("text");
+    entity.setChildclass("TestChildclass");
+  }
 
-        Entity keepEntity = schema2.addEntity("KeepEntity");
+    private void createSchema2() {
+    this.schema2 = new Schema(1, "de.greenrobot.daotest2");
+    this.schema2.setDefaultJavaPackageTest("de.greenrobot.daotest2.entity");
+    this.schema2.setDefaultJavaPackageDao("de.greenrobot.daotest2.dao");
+    this.schema2.enableKeepSectionsByDefault();
+
+    Entity keepEntity = this.schema2.addEntity("KeepEntity");
         keepEntity.addIdProperty();
 
-        Entity toManyTarget2 = schema2.addEntity("ToManyTarget2");
+    Entity toManyTarget2 = this.schema2.addEntity("ToManyTarget2");
         toManyTarget2.addIdProperty();
         Property toManyTarget2FkId = toManyTarget2.addLongProperty("fkId").getProperty();
         toManyTarget2.setSkipGenerationTest(true);
 
-        Entity toOneTarget2 = schema2.addEntity("ToOneTarget2");
+    Entity toOneTarget2 = this.schema2.addEntity("ToOneTarget2");
         toOneTarget2.addIdProperty();
         toOneTarget2.setJavaPackage("de.greenrobot.daotest2.to1_specialentity");
         toOneTarget2.setJavaPackageDao("de.greenrobot.daotest2.to1_specialdao");
         toOneTarget2.setJavaPackageTest("de.greenrobot.daotest2.to1_specialtest");
         toOneTarget2.setSkipGenerationTest(true);
 
-        Entity relationSource2 = schema2.addEntity("RelationSource2");
+    Entity relationSource2 = this.schema2.addEntity("RelationSource2");
         relationSource2.addIdProperty();
         relationSource2.addToMany(toManyTarget2, toManyTarget2FkId);
         Property toOneId = relationSource2.addLongProperty("toOneId").getProperty();
@@ -269,5 +279,24 @@ public class TestDaoGenerator {
         entity.addLongProperty("rootpage");
         entity.addStringProperty("sql");
     }
+
+  protected void createEntityQueryBuilder() {
+    Entity entity = this.schema.addEntity("EntityQueryBuilderEntity");
+    entity.addIdProperty();
+    entity.addStringProperty("text");
+    entity.addStringProperty("text2");
+    entity.addIntProperty("intprop").complexJavaType();
+    entity.addIntProperty("intprop2").notNull();
+    entity.addIntProperty("intprop3").notNull().complexJavaType();
+    entity.addIntProperty("intprop4");
+    entity.setEntityQueryBuilder(true);
+  }
+
+  protected void createSave() {
+    Entity entity = this.schema.addEntity("SaveEntity");
+    entity.addIdProperty();
+    entity.addStringProperty("text");
+    entity.setEntityQueryBuilder(true);
+  }
 
 }

@@ -59,6 +59,7 @@ public class Entity {
     private Property pkProperty;
     private String pkType;
     private String superclass;
+  private String childclass;
 
     private boolean protobuf;
     private boolean constructors;
@@ -67,6 +68,7 @@ public class Entity {
     private boolean skipTableCreation;
     private Boolean active;
     private Boolean hasKeepSections;
+  private boolean entityQueryBuilder;
 
     Entity(Schema schema, String className) {
         this.schema = schema;
@@ -87,62 +89,68 @@ public class Entity {
     }
 
     public PropertyBuilder addBooleanProperty(String propertyName) {
-        return addProperty(PropertyType.Boolean, propertyName);
+    return this.addProperty(PropertyType.Boolean, propertyName);
     }
 
     public PropertyBuilder addByteProperty(String propertyName) {
-        return addProperty(PropertyType.Byte, propertyName);
+    return this.addProperty(PropertyType.Byte, propertyName);
     }
 
     public PropertyBuilder addShortProperty(String propertyName) {
-        return addProperty(PropertyType.Short, propertyName);
+    return this.addProperty(PropertyType.Short, propertyName);
     }
 
     public PropertyBuilder addIntProperty(String propertyName) {
-        return addProperty(PropertyType.Int, propertyName);
+    return this.addProperty(PropertyType.Int, propertyName);
     }
 
     public PropertyBuilder addLongProperty(String propertyName) {
-        return addProperty(PropertyType.Long, propertyName);
+    return this.addProperty(PropertyType.Long, propertyName);
     }
 
     public PropertyBuilder addFloatProperty(String propertyName) {
-        return addProperty(PropertyType.Float, propertyName);
+    return this.addProperty(PropertyType.Float, propertyName);
     }
 
     public PropertyBuilder addDoubleProperty(String propertyName) {
-        return addProperty(PropertyType.Double, propertyName);
+    return this.addProperty(PropertyType.Double, propertyName);
     }
 
     public PropertyBuilder addByteArrayProperty(String propertyName) {
-        return addProperty(PropertyType.ByteArray, propertyName);
+    return this.addProperty(PropertyType.ByteArray, propertyName);
     }
 
     public PropertyBuilder addStringProperty(String propertyName) {
-        return addProperty(PropertyType.String, propertyName);
+    return this.addProperty(PropertyType.String, propertyName);
     }
 
     public PropertyBuilder addDateProperty(String propertyName) {
-        return addProperty(PropertyType.Date, propertyName);
+    return this.addProperty(PropertyType.Date, propertyName);
     }
 
     public PropertyBuilder addProperty(PropertyType propertyType, String propertyName) {
-        if (!propertyNames.add(propertyName)) {
+    if (!this.propertyNames.add(propertyName)) {
             throw new RuntimeException("Property already defined: " + propertyName);
         }
-        PropertyBuilder builder = new Property.PropertyBuilder(schema, this, propertyType, propertyName);
-        properties.add(builder.getProperty());
+    PropertyBuilder builder = new Property.PropertyBuilder(this.schema, this, propertyType, propertyName);
+    this.properties.add(builder.getProperty());
         return builder;
     }
 
-    /** Adds a standard _id column required by standard Android classes, e.g. list adapters. */
+  /**
+   * Adds a standard _id column required by standard Android classes, e.g. list
+   * adapters.
+   */
     public PropertyBuilder addIdProperty() {
-        PropertyBuilder builder = addLongProperty("id");
+    PropertyBuilder builder = this.addLongProperty("id");
         builder.columnName("_id").primaryKey();
         return builder;
     }
 
-    /** Adds a to-many relationship; the target entity is joined to the PK property of this entity (typically the ID). */
+  /**
+   * Adds a to-many relationship; the target entity is joined to the PK property
+   * of this entity (typically the ID).
+   */
     public ToMany addToMany(Entity target, Property targetProperty) {
         Property[] targetProperties = {targetProperty};
         return addToMany(null, target, targetProperties);
@@ -153,14 +161,15 @@ public class Entity {
      * ToMany#setName(String)}.
      */
     public ToMany addToMany(Entity target, Property targetProperty, String name) {
-        ToMany toMany = addToMany(target, targetProperty);
+    ToMany toMany = this.addToMany(target, targetProperty);
         toMany.setName(name);
         return toMany;
     }
 
     /**
-     * Add a to-many relationship; the target entity is joined using the given target property (of the target entity)
-     * and given source property (of this entity).
+   * Add a to-many relationship; the target entity is joined using the given
+   * target property (of the target entity) and given source property (of this
+   * entity).
      */
     public ToMany addToMany(Property sourceProperty, Entity target, Property targetProperty) {
         Property[] sourceProperties = {sourceProperty};
@@ -173,15 +182,15 @@ public class Entity {
             throw new IllegalStateException("Protobuf entities do not support realtions, currently");
         }
 
-        ToMany toMany = new ToMany(schema, this, sourceProperties, target, targetProperties);
-        toManyRelations.add(toMany);
+    ToMany toMany = new ToMany(this.schema, this, sourceProperties, target, targetProperties);
+    this.toManyRelations.add(toMany);
         target.incomingToManyRelations.add(toMany);
         return toMany;
     }
 
     /**
-     * Adds a to-one relationship to the given target entity using the given given foreign key property (which belongs
-     * to this entity).
+   * Adds a to-one relationship to the given target entity using the given given
+   * foreign key property (which belongs to this entity).
      */
     public ToOne addToOne(Entity target, Property fkProperty) {
         if (protobuf) {
@@ -194,15 +203,18 @@ public class Entity {
         return toOne;
     }
 
-    /** Convenience for {@link #addToOne(Entity, Property)} with a subsequent call to {@link ToOne#setName(String)}. */
+  /**
+   * Convenience for {@link #addToOne(Entity, Property)} with a subsequent call
+   * to {@link ToOne#setName(String)}.
+   */
     public ToOne addToOne(Entity target, Property fkProperty, String name) {
-        ToOne toOne = addToOne(target, fkProperty);
+    ToOne toOne = this.addToOne(target, fkProperty);
         toOne.setName(name);
         return toOne;
     }
 
     public ToOne addToOneWithoutProperty(String name, Entity target, String fkColumnName) {
-        return addToOneWithoutProperty(name, target, fkColumnName, false, false);
+    return this.addToOneWithoutProperty(name, target, fkColumnName, false, false);
     }
 
     public ToOne addToOneWithoutProperty(String name, Entity target, String fkColumnName, boolean notNull,
@@ -263,19 +275,27 @@ public class Entity {
     }
 
     public String getClassName() {
-        return className;
+    return this.className;
+  }
+
+  public String getReferencedClassName() {
+    if (this.getHasChildclass()) {
+      return this.childclass;
+    } else {
+      return this.className;
+    }
     }
 
     public List<Property> getProperties() {
-        return properties;
+    return this.properties;
     }
 
     public List<Property> getPropertiesColumns() {
-        return propertiesColumns;
+    return this.propertiesColumns;
     }
 
     public String getJavaPackage() {
-        return javaPackage;
+    return this.javaPackage;
     }
 
     public void setJavaPackage(String javaPackage) {
@@ -412,7 +432,7 @@ public class Entity {
     }
 
     public List<String> getInterfacesToImplement() {
-        return interfacesToImplement;
+    return this.interfacesToImplement;
     }
 
     public List<ContentProvider> getContentProviders() {
@@ -421,57 +441,86 @@ public class Entity {
 
     public void implementsInterface(String... interfaces) {
         for (String interfaceToImplement : interfaces) {
-            interfacesToImplement.add(interfaceToImplement);
+      this.interfacesToImplement.add(interfaceToImplement);
         }
     }
 
     public void implementsSerializable() {
-        interfacesToImplement.add("java.io.Serializable");
+    this.interfacesToImplement.add("java.io.Serializable");
     }
 
     public String getSuperclass() {
-        return superclass;
+    return this.superclass;
     }
 
     public void setSuperclass(String classToExtend) {
         this.superclass = classToExtend;
     }
 
-    void init2ndPass() {
-        init2nPassNamesWithDefaults();
+  public String getChildclass() {
+    return this.childclass;
+  }
 
-        for (int i = 0; i < properties.size(); i++) {
-            Property property = properties.get(i);
+  public void setChildclass(String childclass) {
+    this.childclass = childclass;
+  }
+
+  public boolean getHasChildclassWithPackage() {
+    return this.getHasChildclass() && this.childclass.contains(".");
+  }
+
+  public boolean getHasChildclass() {
+    return (this.childclass != null) && !"".equals(this.childclass.trim());
+  }
+
+  public boolean getHasChildclassInEntityPackage() {
+    return this.getHasChildclass() && !this.childclass.contains(".");
+  }
+
+  public boolean getHasEntityQueryBuilder() {
+    return this.entityQueryBuilder;
+  }
+
+  public void setEntityQueryBuilder(boolean entityQueryBuilder) {
+    this.entityQueryBuilder = entityQueryBuilder;
+  }
+
+    void init2ndPass() {
+    this.init2nPassNamesWithDefaults();
+
+    for (int i = 0; i < this.properties.size(); i++) {
+      Property property = this.properties.get(i);
             property.setOrdinal(i);
             property.init2ndPass();
             if (property.isPrimaryKey()) {
-                propertiesPk.add(property);
+        this.propertiesPk.add(property);
             } else {
-                propertiesNonPk.add(property);
+        this.propertiesNonPk.add(property);
             }
         }
 
-        if (propertiesPk.size() == 1) {
-            pkProperty = propertiesPk.get(0);
-            pkType = schema.mapToJavaTypeNullable(pkProperty.getPropertyType());
+    if (this.propertiesPk.size() == 1) {
+      this.pkProperty = this.propertiesPk.get(0);
+      this.pkType = this.schema.mapToJavaTypeNullable(this.pkProperty.getPropertyType());
         } else {
-            pkType = "Void";
+      this.pkType = "Void";
         }
 
-        propertiesColumns = new ArrayList<Property>(properties);
-        for (ToOne toOne : toOneRelations) {
+    this.propertiesColumns = new ArrayList<Property>(this.properties);
+    for (ToOne toOne : this.toOneRelations) {
             toOne.init2ndPass();
             Property[] fkProperties = toOne.getFkProperties();
             for (Property fkProperty : fkProperties) {
-                if (!propertiesColumns.contains(fkProperty)) {
-                    propertiesColumns.add(fkProperty);
+        if (!this.propertiesColumns.contains(fkProperty)) {
+          this.propertiesColumns.add(fkProperty);
                 }
             }
         }
 
-        for (ToMany toMany : toManyRelations) {
+    for (ToMany toMany : this.toManyRelations) {
             toMany.init2ndPass();
-            // Source Properties may not be virtual, so we do not need the following code:
+      // Source Properties may not be virtual, so we do not need the following
+      // code:
             // for (Property sourceProperty : toMany.getSourceProperties()) {
             // if (!propertiesColumns.contains(sourceProperty)) {
             // propertiesColumns.add(sourceProperty);
@@ -479,13 +528,13 @@ public class Entity {
             // }
         }
 
-        if (active == null) {
-            active = schema.isUseActiveEntitiesByDefault();
+    if (this.active == null) {
+      this.active = this.schema.isUseActiveEntitiesByDefault();
         }
-        active |= !toOneRelations.isEmpty() || !toManyRelations.isEmpty();
+    this.active |= !this.toOneRelations.isEmpty() || !this.toManyRelations.isEmpty();
 
-        if (hasKeepSections == null) {
-            hasKeepSections = schema.isHasKeepSectionsByDefault();
+    if (this.hasKeepSections == null) {
+      this.hasKeepSections = this.schema.isHasKeepSectionsByDefault();
         }
 
         init2ndPassIndexNamesWithDefaults();
@@ -496,40 +545,40 @@ public class Entity {
     }
 
     protected void init2nPassNamesWithDefaults() {
-        if (tableName == null) {
-            tableName = DaoUtil.dbName(className);
+    if (this.tableName == null) {
+      this.tableName = DaoUtil.dbName(this.className);
         }
 
-        if (classNameDao == null) {
-            classNameDao = className + "Dao";
+    if (this.classNameDao == null) {
+      this.classNameDao = this.className + "Dao";
         }
-        if (classNameTest == null) {
-            classNameTest = className + "Test";
-        }
-
-        if (javaPackage == null) {
-            javaPackage = schema.getDefaultJavaPackage();
+    if (this.classNameTest == null) {
+      this.classNameTest = this.className + "Test";
         }
 
-        if (javaPackageDao == null) {
-            javaPackageDao = schema.getDefaultJavaPackageDao();
-            if (javaPackageDao == null) {
-                javaPackageDao = javaPackage;
+    if (this.javaPackage == null) {
+      this.javaPackage = this.schema.getDefaultJavaPackage();
+        }
+
+    if (this.javaPackageDao == null) {
+      this.javaPackageDao = this.schema.getDefaultJavaPackageDao();
+      if (this.javaPackageDao == null) {
+        this.javaPackageDao = this.javaPackage;
             }
         }
-        if (javaPackageTest == null) {
-            javaPackageTest = schema.getDefaultJavaPackageTest();
-            if (javaPackageTest == null) {
-                javaPackageTest = javaPackage;
+    if (this.javaPackageTest == null) {
+      this.javaPackageTest = this.schema.getDefaultJavaPackageTest();
+      if (this.javaPackageTest == null) {
+        this.javaPackageTest = this.javaPackage;
             }
         }
     }
 
     protected void init2ndPassIndexNamesWithDefaults() {
-        for (int i = 0; i < indexes.size(); i++) {
-            Index index = indexes.get(i);
+    for (int i = 0; i < this.indexes.size(); i++) {
+      Index index = this.indexes.get(i);
             if (index.getName() == null) {
-                String indexName = "IDX_" + getTableName();
+        String indexName = "IDX_" + this.getTableName();
                 List<Property> properties = index.getProperties();
                 for (int j = 0; j < properties.size(); j++) {
                     Property property = properties.get(j);
