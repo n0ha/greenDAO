@@ -16,17 +16,14 @@
 
 package de.greenrobot.dao;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-
 import android.database.CrossProcessCursor;
 import android.database.Cursor;
 import android.database.CursorWindow;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
+import de.greenrobot.dao.callbacks.ActiveEntity;
+import de.greenrobot.dao.callbacks.OnBeforeInsertCallback;
 import de.greenrobot.dao.identityscope.IdentityScope;
 import de.greenrobot.dao.identityscope.IdentityScopeLong;
 import de.greenrobot.dao.internal.DaoConfig;
@@ -35,13 +32,18 @@ import de.greenrobot.dao.internal.TableStatements;
 import de.greenrobot.dao.query.Query;
 import de.greenrobot.dao.query.QueryBuilder;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
 /**
  * Base class for all DAOs: Implements entity operations like insert, load, delete, and query.
- * 
+ *
  * This class is thread-safe.
- * 
+ *
  * @author Markus
- * 
+ *
  * @param <T>
  *            Entity type
  * @param <K>
@@ -49,11 +51,11 @@ import de.greenrobot.dao.query.QueryBuilder;
  */
 /*
  * When operating on TX, statements, or identity scope the following locking order must be met to avoid deadlocks:
- * 
+ *
  * 1.) If not inside a TX already, begin a TX to acquire a DB connection (connection is to be handled like a lock)
- * 
+ *
  * 2.) The SQLiteStatement
- * 
+ *
  * 3.) identityScope
  */
 public abstract class AbstractDao<T, K> {
@@ -117,7 +119,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Loads and entity for the given PK.
-     * 
+     *
      * @param key
      *            a PK value or null
      * @return The entity or null, if no entity matched the PK value
@@ -189,7 +191,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Inserts the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      */
@@ -199,7 +201,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Inserts the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      */
@@ -210,7 +212,7 @@ public abstract class AbstractDao<T, K> {
     /**
      * Inserts the given entities in the database using a transaction. The given entities will become tracked if the PK
      * is set.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      * @param setPrimaryKey
@@ -224,7 +226,7 @@ public abstract class AbstractDao<T, K> {
     /**
      * Inserts or replaces the given entities in the database using a transaction. The given entities will become
      * tracked if the PK is set.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      * @param setPrimaryKey
@@ -237,7 +239,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Inserts or replaces the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      */
@@ -247,12 +249,24 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Inserts or replaces the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      */
     public void insertOrReplaceInTx(T... entities) {
         insertOrReplaceInTx(Arrays.asList(entities), isEntityUpdateable());
+    }
+
+    protected void callOnBeforeInsertCallback(T entity) {
+        // first set actual DAO for entity
+        if (entity instanceof ActiveEntity) {
+            ((ActiveEntity) entity).__setDaoSession(session);
+        }
+
+        // now let the entity update itself before insert
+        if (entity instanceof OnBeforeInsertCallback) {
+            ((OnBeforeInsertCallback) entity).onBeforeInsert();
+        }
     }
 
     private void executeInsertInTx(SQLiteStatement stmt, Iterable<T> entities, boolean setPrimaryKey) {
@@ -264,6 +278,7 @@ public abstract class AbstractDao<T, K> {
                 }
                 try {
                     for (T entity : entities) {
+                        callOnBeforeInsertCallback(entity);
                         bindValues(stmt, entity);
                         if (setPrimaryKey) {
                             long rowId = stmt.executeInsert();
@@ -286,7 +301,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Insert an entity into the table associated with a concrete DAO.
-     * 
+     *
      * @return row ID of newly inserted entity
      */
     public long insert(T entity) {
@@ -296,10 +311,11 @@ public abstract class AbstractDao<T, K> {
     /**
      * Insert an entity into the table associated with a concrete DAO <b>without</b> setting key property. Warning: This
      * may be faster, but the entity should not be used anymore. The entity also won't be attached to identy scope.
-     * 
+     *
      * @return row ID of newly inserted entity
      */
     public long insertWithoutSettingPk(T entity) {
+        callOnBeforeInsertCallback(entity);
         SQLiteStatement stmt = statements.getInsertStatement();
         long rowId;
         if (db.isDbLockedByCurrentThread()) {
@@ -325,7 +341,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Insert an entity into the table associated with a concrete DAO.
-     * 
+     *
      * @return row ID of newly inserted entity
      */
     public long insertOrReplace(T entity) {
@@ -333,6 +349,7 @@ public abstract class AbstractDao<T, K> {
     }
 
     private long executeInsert(T entity, SQLiteStatement stmt) {
+        callOnBeforeInsertCallback(entity);
         long rowId;
         if (db.isDbLockedByCurrentThread()) {
             synchronized (stmt) {
@@ -579,7 +596,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Deletes the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to delete.
      */
@@ -589,7 +606,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Deletes the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to delete.
      */
@@ -599,7 +616,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Deletes all entities with the given keys in the database using a transaction.
-     * 
+     *
      * @param keys
      *            Keys of the entities to delete.
      */
@@ -609,7 +626,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Deletes all entities with the given keys in the database using a transaction.
-     * 
+     *
      * @param keys
      *            Keys of the entities to delete.
      */
@@ -682,7 +699,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Attaches the entity to the identity scope. Calls attachEntity(T entity).
-     * 
+     *
      * @param key
      *            Needed only for identity scope, pass null if there's none.
      * @param entity
@@ -702,7 +719,7 @@ public abstract class AbstractDao<T, K> {
     /**
      * Sub classes with relations additionally set the DaoMaster here. Must be called before the entity is attached to
      * the identity scope.
-     * 
+     *
      * @param entity
      *            The entitiy to attach
      * */
@@ -711,7 +728,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Updates the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to insert.
      */
@@ -741,7 +758,7 @@ public abstract class AbstractDao<T, K> {
 
     /**
      * Updates the given entities in the database using a transaction.
-     * 
+     *
      * @param entities
      *            The entities to update.
      */
@@ -785,7 +802,7 @@ public abstract class AbstractDao<T, K> {
    * just stores the given entity, if the primary key field is filled, it will
    * be updated, a check if the given primary key exists will be performed.
    * Otherwise it will be inserted.
-   * 
+   *
    * @see AbstractDao#save(Object, boolean)
    * @param entity
    *          the entity to save
@@ -799,7 +816,7 @@ public abstract class AbstractDao<T, K> {
    * just stores the given entity. if <code>checkExisting</code> is set to
    * <code>true</code>, it will be checked if the given entity with the given
    * primary key exists in the database
-   * 
+   *
    * @param entity
    *          the entity to save
    * @param checkExistingPK
